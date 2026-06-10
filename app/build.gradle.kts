@@ -39,6 +39,7 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
     implementation("mysql:mysql-connector-java:5.1.49")
     implementation("at.favre.lib:bcrypt:0.10.2")
     testImplementation(libs.junit)
