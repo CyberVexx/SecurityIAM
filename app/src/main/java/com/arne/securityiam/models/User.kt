@@ -1,8 +1,8 @@
 package com.arne.securityiam.models
 
 data class User(
-    val id: String,
+    val id: Int,
     val name: String,
     val email: String,
-    val password: String
+    val role: String
 )
