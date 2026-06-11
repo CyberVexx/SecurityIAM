@@ -45,6 +45,7 @@
             android:layout_marginBottom="16dp"
             android:hint="@string/txt_password"
             android:inputType="textPassword"
+            android:textColor="@color/white"
             android:textColorHint="#AAAAAA" />
 
         <LinearLayout

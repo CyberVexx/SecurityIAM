@@ -12,4 +12,6 @@
     <string name="txt_login_now">Login now</string>
     <string name="txt_register_question">Don\'t have an account?</string>
     <string name="txt_login_question">Already have an account?</string>
+    
+    <string name="txt_dashboard_title">Dashboard</string>"
 </resources>

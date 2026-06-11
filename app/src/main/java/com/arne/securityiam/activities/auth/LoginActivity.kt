@@ -9,9 +9,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.arne.securityiam.R
-import com.arne.securityiam.activities.roles.DoctorActivity
-import com.arne.securityiam.activities.roles.NurseActivity
-import com.arne.securityiam.activities.roles.PatientActivity
+import com.arne.securityiam.activities.roles.UserActivity
 import com.arne.securityiam.api.db
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -35,7 +33,6 @@ class LoginActivity : AppCompatActivity() {
         btn_login.setOnClickListener {
             val name = et_login_username.text.toString().trim()
             val password = et_login_password.text.toString().trim()
-
 
             if (name.isEmpty() || password.isEmpty()) {
                 Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_SHORT).show()
@@ -62,19 +59,13 @@ class LoginActivity : AppCompatActivity() {
 
             result
                 .onSuccess { user ->
-                    val targetActivity = when (user.role) {
-                        "doctor" -> DoctorActivity::class.java
-                        "nurse" -> NurseActivity::class.java
-                        "patient" -> PatientActivity::class.java
-                        else -> {
-                            Toast.makeText(this@LoginActivity, "Unknown role: ${user.role}", Toast.LENGTH_LONG).show()
-                            return@onSuccess
-                        }
-                    }
-
-                    val intent = Intent(this@LoginActivity, targetActivity)
+                    val intent = Intent(this@LoginActivity, UserActivity::class.java)
                     intent.putExtra("PERSON_ID", user.id)
                     intent.putExtra("NAME", user.name)
+                    intent.putExtra("ROLE", user.role)
+                    intent.putExtra("EMAIL", user.email)
+                    intent.putExtra("BIRTH_DATE", user.birthDate)
+                    intent.putExtra("ADDRESS", user.address)
                     startActivity(intent)
                     finish()
                 }
