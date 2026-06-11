@@ -32,7 +32,7 @@
             android:exported="true" />
 
         <activity
-            android:name=".activities.MainActivity"
+            android:name=".activities.roles.UserActivity"
             android:exported="true" />
 
         <activity
@@ -46,6 +46,9 @@
         <activity
             android:name=".activities.roles.PatientActivity"
             android:exported="true" />
-    </application>
 
+        <activity
+            android:name=".activities.MainActivity"
+            android:exported="true" />
+    </application>
 </manifest>
