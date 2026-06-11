@@ -42,7 +42,7 @@
             android:id="@+id/et_login_password"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="8dp"
             android:hint="@string/txt_password"
             android:inputType="textPassword"
             android:textColor="@color/white"
@@ -62,7 +62,8 @@
                 android:layout_weight="1"
                 android:text="@string/txt_register_question"
                 android:textAlignment="center"
-                android:textColor="@color/white" />
+                android:textColor="@color/white"
+                android:textSize="14sp" />
 
             <TextView
                 android:id="@+id/tv_register"
@@ -71,7 +72,8 @@
                 android:layout_weight="1"
                 android:text="@string/txt_register_now"
                 android:textAlignment="textStart"
-                android:textColor="@color/primary" />
+                android:textColor="@color/primary"
+                android:textSize="14sp" />
         </LinearLayout>
 
         <Button
@@ -80,6 +82,16 @@
             android:layout_height="wrap_content"
             android:backgroundTint="@color/primary"
             android:text="@string/txt_login" />
+
+        <TextView
+            android:id="@+id/tv_forgot_password"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="16dp"
+            android:text="Forgot Password?"
+            android:textColor="@color/white"
+            android:textSize="14sp" />
 
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

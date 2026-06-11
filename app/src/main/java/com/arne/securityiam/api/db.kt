@@ -6,6 +6,8 @@ import com.arne.securityiam.utils.PasswordHash
 import java.sql.Connection
 import java.sql.DriverManager
 import java.sql.Statement
+import java.sql.Timestamp
+import java.util.Calendar
 
 class db {
     companion object {
@@ -24,7 +26,7 @@ class db {
             }
         }
 
-        fun registerPatient(name: String, email: String, plainPassword: String): Result<User> {
+        fun registerUser(name: String, email: String, plainPassword: String): Result<User> {
             val passwordHash = PasswordHash.hashPassword(plainPassword)
 
             val connection = getConnection()
@@ -36,8 +38,8 @@ class db {
 
                     try {
                         val insertPersonSql = """
-                            INSERT INTO person (name, email, password_hash)
-                            VALUES (?, ?, ?)
+                            INSERT INTO person (name, email, password_hash, is_confirmed, failed_attempts)
+                            VALUES (?, ?, ?, 0, 0)
                         """.trimIndent()
 
                         conn.prepareStatement(insertPersonSql, Statement.RETURN_GENERATED_KEYS).use { personStmt ->
@@ -91,6 +93,9 @@ class db {
                             p.password_hash,
                             p.birth_date,
                             p.address,
+                            p.is_confirmed,
+                            p.failed_attempts,
+                            p.blocked_at,
                             CASE
                                 WHEN d.doctor_id IS NOT NULL THEN 'doctor'
                                 WHEN n.nurse_id IS NOT NULL THEN 'nurse'
@@ -113,17 +118,50 @@ class db {
                                 return Result.failure(Exception("No user found with this name"))
                             }
 
+                            val personId = rs.getInt("person_id")
+                            val isConfirmed = rs.getInt("is_confirmed") == 1
+                            var failedAttempts = rs.getInt("failed_attempts")
+                            val blockedAt = rs.getTimestamp("blocked_at")
+
+                            if (!isConfirmed) {
+                                return Result.failure(Exception("Account is not confirmed yet"))
+                            }
+
+                            val currentTime = System.currentTimeMillis()
+                            if (blockedAt != null) {
+                                val lockoutDuration = 1 * 60 * 1000 // 15 minutes lockout
+                                val timeElapsed = currentTime - blockedAt.time
+                                if (timeElapsed < lockoutDuration) {
+                                    val remaining = (lockoutDuration - timeElapsed) / 60000 + 1
+                                    return Result.failure(Exception("Account blocked. Try again in $remaining minute(s)."))
+                                } else {
+                                    // Lockout expired, treat as fresh start
+                                    failedAttempts = 0
+                                }
+                            }
+
                             val passwordHash = rs.getString("password_hash")
                             if (passwordHash.isNullOrBlank()) {
                                 return Result.failure(Exception("This user does not have a password yet"))
                             }
 
                             if (!PasswordHash.verifyPassword(plainPassword, passwordHash)) {
-                                return Result.failure(Exception("Wrong password"))
+                                val newFailedAttempts = failedAttempts + 1
+                                if (newFailedAttempts >= 3) {
+                                    val now = Timestamp(currentTime)
+                                    updateLoginStatus(conn, personId, newFailedAttempts, now)
+                                    return Result.failure(Exception("Wrong password. Account blocked for 1 minute."))
+                                } else {
+                                    updateLoginStatus(conn, personId, newFailedAttempts, null)
+                                    return Result.failure(Exception("Wrong password. Attempt $newFailedAttempts of 3."))
+                                }
                             }
 
+                            // Success: Reset failed attempts and block timestamp
+                            updateLoginStatus(conn, personId, 0, null)
+
                             val user = User(
-                                id = rs.getInt("person_id"),
+                                id = personId,
                                 name = rs.getString("name"),
                                 email = rs.getString("email"),
                                 role = rs.getString("role"),
@@ -132,6 +170,48 @@ class db {
                             )
                             Result.success(user)
                         }
+                    }
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
+        private fun updateLoginStatus(conn: Connection, personId: Int, failedAttempts: Int, blockedAt: Timestamp?) {
+            val sql = "UPDATE person SET failed_attempts = ?, blocked_at = ? WHERE person_id = ?"
+            conn.prepareStatement(sql).use { stmt ->
+                stmt.setInt(1, failedAttempts)
+                stmt.setTimestamp(2, blockedAt)
+                stmt.setInt(3, personId)
+                stmt.executeUpdate()
+            }
+        }
+
+        fun resetPassword(email: String, newPlainPassword: String): Result<Unit> {
+            val hash = PasswordHash.hashPassword(newPlainPassword)
+            val connection = getConnection() ?: return Result.failure(Exception("No connection"))
+            return try {
+                connection.use { conn ->
+                    val sql = "UPDATE person SET password_hash = ?, failed_attempts = 0, blocked_at = NULL WHERE LOWER(email) = LOWER(?)"
+                    conn.prepareStatement(sql).use { stmt ->
+                        stmt.setString(1, hash)
+                        stmt.setString(2, email)
+                        if (stmt.executeUpdate() > 0) Result.success(Unit) else Result.failure(Exception("Email not found"))
+                    }
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
+        fun confirmUser(personId: Int): Result<Unit> {
+            val connection = getConnection() ?: return Result.failure(Exception("No connection"))
+            return try {
+                connection.use { conn ->
+                    val sql = "UPDATE person SET is_confirmed = 1, confirmed_at = CURRENT_TIMESTAMP WHERE person_id = ?"
+                    conn.prepareStatement(sql).use { stmt ->
+                        stmt.setInt(1, personId)
+                        if (stmt.executeUpdate() > 0) Result.success(Unit) else Result.failure(Exception("User not found"))
                     }
                 }
             } catch (e: Exception) {
