@@ -1,5 +1,6 @@
 package com.arne.securityiam.api
 
+import com.arne.securityiam.models.MedicalRecord
 import com.arne.securityiam.models.User
 import com.arne.securityiam.utils.PasswordHash
 import java.sql.Connection
@@ -16,10 +17,8 @@ class db {
             return try {
                 Class.forName("com.mysql.jdbc.Driver")
                 val conn = DriverManager.getConnection(dbUrl, dbUser, dbPassword)
-                println("=== DB CONNECTION SUCCESS: $conn ===")
                 conn
             } catch (e: Exception) {
-                println("=== DB CONNECTION FAILED: ${e::class.java.simpleName}: ${e.message} ===")
                 e.printStackTrace()
                 null
             }
@@ -90,6 +89,8 @@ class db {
                             p.name,
                             p.email,
                             p.password_hash,
+                            p.birth_date,
+                            p.address,
                             CASE
                                 WHEN d.doctor_id IS NOT NULL THEN 'doctor'
                                 WHEN n.nurse_id IS NOT NULL THEN 'nurse'
@@ -125,9 +126,10 @@ class db {
                                 id = rs.getInt("person_id"),
                                 name = rs.getString("name"),
                                 email = rs.getString("email"),
-                                role = rs.getString("role")
+                                role = rs.getString("role"),
+                                birthDate = rs.getString("birth_date"),
+                                address = rs.getString("address")
                             )
-
                             Result.success(user)
                         }
                     }
@@ -137,51 +139,47 @@ class db {
             }
         }
 
-        fun seedExistingPersonLogins(): Result<Int> {
-            val usersToSeed = listOf(
-                Triple(1, "doctor.thomas@iam.test", "doctor1234"),
-                Triple(2, "doctor.wim@iam.test", "doctor1234"),
-                Triple(3, "robbie.uijttenboogaard@iam.test", "patient1234"),
-                Triple(4, "frans.leijdekkers@iam.test", "patient1234"),
-                Triple(5, "zuster.joke@iam.test", "nurse1234"),
-                Triple(6, "zuster.anna@iam.test", "doctor1234"),
-                Triple(7, "emma.devries@iam.test", "doctor1234"),
-                Triple(8, "lars.boer@iam.test", "patient1234"),
-                Triple(9, "sophie.klein@iam.test", "patient1234"),
-                Triple(10, "bram.vandijk@iam.test", "patient1234"),
-                Triple(11, "eva.jansen@iam.test", "nurse1234")
-            )
+        fun getRecordsForDoctor(doctorId: Int): List<MedicalRecord> {
+            return getRecords("WHERE d.doctor_id = ?", doctorId)
+        }
 
-            val connection = getConnection()
-                ?: return Result.failure(Exception("Could not connect to the database"))
+        fun getRecordsForPatient(personId: Int): List<MedicalRecord> {
+            return getRecords("WHERE pa.person_id = ?", personId)
+        }
 
-            return try {
-                connection.use { conn ->
-                    val sql = """
-                        UPDATE person
-                        SET email = ?, password_hash = ?
-                        WHERE person_id = ?
-                          AND (email IS NULL OR password_hash IS NULL)
-                    """.trimIndent()
+        fun getAllRecords(): List<MedicalRecord> {
+            return getRecords("", null)
+        }
 
-                    conn.prepareStatement(sql).use { stmt ->
-                        var changedRows = 0
-
-                        for ((personId, email, password) in usersToSeed) {
-                            val passwordHash = PasswordHash.hashPassword(password)
-
-                            stmt.setString(1, email)
-                            stmt.setString(2, passwordHash)
-                            stmt.setInt(3, personId)
-                            changedRows += stmt.executeUpdate()
+        private fun getRecords(whereClause: String, id: Int?): List<MedicalRecord> {
+            val list = mutableListOf<MedicalRecord>()
+            getConnection()?.use { conn ->
+                val sql = """
+                    SELECT mr.record_id, p_pat.name as pat_name, p_doc.name as doc_name, mr.diagnosis, mr.treatment_date
+                    FROM medical_record mr
+                    JOIN patient pa ON mr.patient_id = pa.patient_id
+                    JOIN person p_pat ON pa.person_id = p_pat.person_id
+                    JOIN doctor d ON mr.doctor_id = d.doctor_id
+                    JOIN person p_doc ON d.doctor_id = p_doc.person_id
+                    $whereClause
+                    ORDER BY mr.treatment_date DESC
+                """.trimIndent()
+                conn.prepareStatement(sql).use { stmt ->
+                    id?.let { stmt.setInt(1, it) }
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            list.add(MedicalRecord(
+                                rs.getInt("record_id"),
+                                rs.getString("pat_name"),
+                                rs.getString("doc_name"),
+                                rs.getString("diagnosis"),
+                                rs.getString("treatment_date")
+                            ))
                         }
-
-                        Result.success(changedRows)
                     }
                 }
-            } catch (e: Exception) {
-                Result.failure(e)
             }
+            return list
         }
     }
 }
