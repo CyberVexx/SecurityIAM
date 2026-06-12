@@ -7,12 +7,15 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.arne.securityiam.R
 import com.arne.securityiam.activities.auth.LoginActivity
+import com.arne.securityiam.utils.SessionManager
 
 class UserActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_role_user)
+
+        val sessionManager = SessionManager(this)
 
         // 1. Get user data from Intent
         val personId = intent.getIntExtra("PERSON_ID", -1)
@@ -33,6 +36,7 @@ class UserActivity : AppCompatActivity() {
 
         // 3. Handle Logout Button
         findViewById<Button>(R.id.btn_logout).setOnClickListener {
+            sessionManager.logout()
             val intent = Intent(this, LoginActivity::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             startActivity(intent)
