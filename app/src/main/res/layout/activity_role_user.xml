@@ -85,9 +85,11 @@
         android:layout_width="match_parent"
         android:layout_height="60dp"
         android:layout_marginTop="48dp"
+        android:backgroundTint="@color/primary"
         android:text="Go to Dashboard"
         android:textSize="18sp"
-        app:layout_constraintTop_toBottomOf="@id/card_profile" />
+        app:layout_constraintTop_toBottomOf="@id/card_profile"
+        tools:layout_editor_absoluteX="24dp" />
 
     <Button
         android:id="@+id/btn_logout"

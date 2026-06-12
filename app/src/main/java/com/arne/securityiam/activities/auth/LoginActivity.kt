@@ -11,6 +11,7 @@ import androidx.lifecycle.lifecycleScope
 import com.arne.securityiam.R
 import com.arne.securityiam.activities.roles.UserActivity
 import com.arne.securityiam.api.db
+import com.arne.securityiam.utils.SessionManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -20,15 +21,20 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var et_login_password: EditText
     private lateinit var btn_login: Button
     private lateinit var tv_register: TextView
+    private lateinit var tv_forgot_password: TextView
+    private lateinit var sessionManager: SessionManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
 
+        sessionManager = SessionManager(this)
+
         et_login_username = findViewById(R.id.et_login_username)
         et_login_password = findViewById(R.id.et_login_password)
         btn_login = findViewById(R.id.btn_login)
         tv_register = findViewById(R.id.tv_register)
+        tv_forgot_password = findViewById(R.id.tv_forgot_password)
 
         btn_login.setOnClickListener {
             val name = et_login_username.text.toString().trim()
@@ -45,6 +51,10 @@ class LoginActivity : AppCompatActivity() {
         tv_register.setOnClickListener {
             startActivity(Intent(this, RegisterActivity::class.java))
         }
+
+        tv_forgot_password.setOnClickListener {
+            startActivity(Intent(this, ForgotPasswordActivity::class.java))
+        }
     }
 
     private fun login(name: String, password: String) {
@@ -59,6 +69,7 @@ class LoginActivity : AppCompatActivity() {
 
             result
                 .onSuccess { user ->
+                    sessionManager.saveUserSession(user)
                     val intent = Intent(this@LoginActivity, UserActivity::class.java)
                     intent.putExtra("PERSON_ID", user.id)
                     intent.putExtra("NAME", user.name)

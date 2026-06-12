@@ -10,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.arne.securityiam.R
 import com.arne.securityiam.api.db
+import com.arne.securityiam.utils.PasswordValidator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -58,11 +59,16 @@ class RegisterActivity : AppCompatActivity() {
             return
         }
 
+        PasswordValidator.validate(password).onFailure {
+            Toast.makeText(this, it.message, Toast.LENGTH_SHORT).show()
+            return
+        }
+
         btn_register.isEnabled = false
 
         lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {
-                db.registerPatient(name, email, password)
+                db.registerUser(name, email, password)
             }
 
             btn_register.isEnabled = true
